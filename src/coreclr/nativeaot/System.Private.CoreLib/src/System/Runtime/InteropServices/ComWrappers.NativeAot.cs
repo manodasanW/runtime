@@ -1225,7 +1225,7 @@ namespace System.Runtime.InteropServices
             // with a handle being removed and freed and we can end up accessing a freed handle.
             // To avoid this, we take a lock on modifications to the collection while we gather
             // the objects.
-            using (s_referenceTrackerNativeObjectWrapperCache.ModificationLock.EnterScope())
+            using (LockHolder.Hold(s_referenceTrackerNativeObjectWrapperCache.ModificationLock))
             {
                 foreach (GCHandle weakNativeObjectWrapperHandle in s_referenceTrackerNativeObjectWrapperCache)
                 {
@@ -1658,13 +1658,13 @@ namespace System.Runtime.InteropServices
 
         private Entry?[] _buckets = new Entry[DefaultSize];
         private int _numEntries;
-        private readonly Lock _lock = new Lock(useTrivialWaits: true);
+        private readonly Lock _lock = new Lock();
 
         public Lock ModificationLock => _lock;
 
         public void Add(GCHandle handle)
         {
-            using (_lock.EnterScope())
+            using (LockHolder.Hold(_lock))
             {
                 int bucket = GetBucket(handle, _buckets.Length);
                 Entry? prev = null;
@@ -1738,7 +1738,7 @@ namespace System.Runtime.InteropServices
 
         public void Remove(GCHandle handle)
         {
-            using (_lock.EnterScope())
+            using (LockHolder.Hold(_lock))
             {
                 int bucket = GetBucket(handle, _buckets.Length);
                 Entry? prev = null;
